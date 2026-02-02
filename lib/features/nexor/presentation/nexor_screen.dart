@@ -7,12 +7,14 @@ import '../infrastructure/providers/qwen_provider.dart';
 import '../infrastructure/tools/tool_registry.dart';
 import '../../setup/presentation/connection_provider.dart';
 import '../../nexi/presentation/nexi_marketplace.dart';
+import '../../../shared/widgets/settings_screen.dart';
 
 final nexorRepositoryProvider = Provider((ref) => NexorRepositoryImpl());
 
-final qwenProviderProvider = Provider((ref) => QwenProvider(
-  apiKey: null, // TODO: Load from settings
-));
+final qwenProviderProvider = Provider((ref) {
+  final apiKey = ref.watch(apiKeyProvider);
+  return QwenProvider(apiKey: apiKey);
+});
 
 final currentChatIdProvider = StateProvider<String?>((ref) => null);
 

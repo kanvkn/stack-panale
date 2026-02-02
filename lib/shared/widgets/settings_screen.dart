@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/theme_provider.dart';
 import '../theme/accent_color_provider.dart';
+
+final apiKeyProvider = StateNotifierProvider<ApiKeyNotifier, String?>((ref) {
+  return ApiKeyNotifier();
+});
+
+class ApiKeyNotifier extends StateNotifier<String?> {
+  ApiKeyNotifier() : super(null) {
+    _loadApiKey();
+  }
+
+  Future<void> _loadApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getString('qwen_api_key');
+  }
+
+  Future<void> setApiKey(String key) async {
+    state = key;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('qwen_api_key', key);
+  }
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -56,10 +78,7 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: const Text('Configure AI provider'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // TODO: Implement API key configuration
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coming soon')),
-                  );
+                  _showApiKeyDialog(context, ref);
                 },
               ),
             ],
@@ -121,6 +140,50 @@ class SettingsScreen extends ConsumerWidget {
               }).toList(),
             ),
             const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showApiKeyDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController(text: ref.read(apiKeyProvider) ?? '');
+    bool obscure = true;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Qwen API Key'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: 'API Key',
+              hintText: 'Enter your Qwen API key',
+              suffixIcon: IconButton(
+                icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                onPressed: () => setState(() => obscure = !obscure),
+              ),
+            ),
+            obscureText: obscure,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await ref.read(apiKeyProvider.notifier).setApiKey(controller.text);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('API Key saved')),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
